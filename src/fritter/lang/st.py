@@ -67,9 +67,9 @@ class Parallel(Node):
 
 
 @dataclass
-class Alternatives(Node):
+class Branch(Node):
     children: list[Node]
-    alternatives: dict[int, int]  # Map from repetition number to child index
+    selectors: dict[int, int]  # Map from repetition number to child index
 
 
 @dataclass

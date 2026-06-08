@@ -37,14 +37,14 @@ def atom():      return [group, tie, Cont, Rest, Erase, Note], ZeroOrMore(postfi
 def group(): return QStrMatch("("), expression, QStrMatch(")")
 def tie():   return QStrMatch("["), expression, QStrMatch("]")
 
-def Num():         return RegExMatch(r"\d+")
-def alternative(): return QStrMatch("|"), OneOrMore(Num, sep=QStrMatch(",")), QStrMatch(":")
-def Modulator():   return RegExMatch(r"[\w#]+"), QStrMatch(";")
+def Num():       return RegExMatch(r"\d+")
+def choice():    return QStrMatch("|"), OneOrMore(Num, sep=QStrMatch(",")), QStrMatch(":")
+def Modulator(): return RegExMatch(r"[\w#]+"), QStrMatch(";")
 
 def cat(): return ZeroOrMore(atom)
 def par(): return OneOrMore(cat, sep=QStrMatch(","))
-def alt(): return OneOrMore(par, sep=alternative)
-def mod(): return Optional(Modulator), alt
+def bra(): return OneOrMore(par, sep=choice)
+def mod(): return Optional(Modulator), bra
 
 expression = mod
 
@@ -102,7 +102,7 @@ class FritterVisitor(PTNodeVisitor):
     def visit_tie(self, _node, children):
         return st.Tie(children[0])
 
-    def visit_alternative(self, _node, children):
+    def visit_choice(self, _node, children):
         return list(map(int, children))
 
     def visit_cat(self, _node, children):
@@ -115,20 +115,20 @@ class FritterVisitor(PTNodeVisitor):
 
         return st.Parallel(children)
 
-    def visit_alt(self, _node, children):
-        if not children.alternative: return children.par[0]
+    def visit_bra(self, _node, children):
+        if not children.choice: return children.par[0]
 
-        return st.Alternatives(
+        return st.Branch(
             children.par,
             {
                 num: index + 1
-                for index, nums in enumerate(children.alternative)
+                for index, nums in enumerate(children.choice)
                 for num in nums
             }
         )
 
     def visit_mod(self, _node, children):
-        child = children.alt[0]
+        child = children.bra[0]
         if not children.Modulator: return child
 
         return st.Modulation(child, children.Modulator[0])

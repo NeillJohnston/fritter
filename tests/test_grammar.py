@@ -5,7 +5,7 @@ from fritter.lang import st
 def test_binop_precedence():
     tree = parse_fritter("mod; a b, c d |3,4: e f, g h")
     assert tree == st.Modulation(
-        st.Alternatives(
+        st.Branch(
             [
                 st.Parallel([
                     st.Concatenation([
