@@ -3,7 +3,7 @@ from parsy import *  # TODO replace glob import
 from fritter.lang import st
 
 
-"""
+r"""
 Rough formal definition of the language:
 
 expression    ::= modulations
@@ -89,7 +89,7 @@ postfix    = (
 
 # Atoms
 group .become(strlex("(") >> expression << strlex(")"))
-tie   .become(strlex("[") >> expression << strlex("]"))
+tie   .become(strlex("[") >> expression.map(st.Tie) << strlex("]"))
 
 argless = lambda func: (lambda *_args: func())
 
