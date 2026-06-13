@@ -1,6 +1,31 @@
-from arpeggio import OneOrMore, Optional, ParserPython, PTNodeVisitor, RegExMatch, StrMatch, ZeroOrMore, EOF, visit_parse_tree
+from parsy import *  # TODO replace glob import
 
 from fritter.lang import st
+
+
+"""
+Rough formal definition of the language:
+
+expression    ::= modulations
+modulations   ::= branches? (Modulator branches)*
+branches      ::= parallel (branch_selectors parallel)*
+parallel      ::= concatenation ("," concatenation)*
+concatenation ::= atom+
+
+atom  ::= (group | tie | Cont | Rest | Erase | Note) operator*
+group ::= "(" expression ")"
+tie   ::= "[" expression "]"
+Cont  ::= "_"
+Rest  ::= "~"
+Erase ::= "<~"
+Note  ::= /[\w#]+/
+
+operator ::= Octave | Dynamics | Span | Repeat
+Octave   ::= ("-" | "+")+
+Dynamics ::= "." /\w+/
+Span     ::= "/" /[tseqhw]+/
+Repeat   ::= "*" /\d+/
+"""
 
 
 SPAN_UNITS_MAP = {
@@ -13,130 +38,85 @@ SPAN_UNITS_MAP = {
 }
 
 
-class QStrMatch(StrMatch):
-    """Quiet string match."""
-    suppress = True
+def construct_atom(atom: st.Node, operators: list[st.Node]):
+    for partial in operators:
+        partial.child = atom
+        atom = partial
+    return atom
 
+
+def construct_branches(head: st.Node, tail: list[tuple[list[int], st.Node]]) -> st.Node:
+    if len(tail) == 0: return head
+
+    tail_selector_lists, tail_nodes = zip(*tail)
+    return st.Branches(
+        [head] + list(tail_nodes),
+        {selector: index+1 for index, selector_list in enumerate(tail_selector_lists) for selector in selector_list}
+    )
+
+
+def construct_mod(modulator: str | None, node: st.Node) -> st.Node:
+    if modulator is None: return node
+
+    return st.Modulation(node, modulator)
+
+
+# Lexemes are tokens with optional whitespace
+space = regex(r"\s*")
+lexeme = lambda parser: parser << space
+strlex = lambda pattern: lexeme(string(pattern))
+
+# Small pieces and forward declarations
+num   = lexeme(regex(r"\d+"))
+
+expression  = forward_declaration()
+group = forward_declaration()
+tie   = forward_declaration()
 
 # Operators
-def Octave():   return RegExMatch(r"[\-+]+")
-def Dynamics(): return QStrMatch("."), RegExMatch(r"\w+")
-def Span():     return QStrMatch("/"), RegExMatch(r"\w+")
-def Repeat():   return QStrMatch("*"), RegExMatch(r"\d+")
-def postfix(): return [Octave, Dynamics, Span, Repeat]
+Octave   = lexeme(regex(r"[\-+]+").map(lambda s: s.count("+") - s.count("-")))
+Dynamics = lexeme(regex(r"\.(\w+)", group=1))
+Span     = lexeme(regex(r"/([tseqhw]+)", group=1).map(lambda s: sum(SPAN_UNITS_MAP[c] for c in s)))
+Repeat   = lexeme(regex(r"\*(\d+)", group=1).map(int))
+# Parsers for operators will partially construct their nodes, for easy construction later
+partial_op = lambda func: (lambda operand: func(None, operand))
+postfix    = (
+    Octave.map(partial_op(st.OctaveShift))
+    | Dynamics.map(partial_op(st.Dynamics))
+    | Span.map(partial_op(st.Span))
+    | Repeat.map(partial_op(st.Repeat))
+)
 
 # Atoms
-def Cont():  return "_"
-def Rest():  return "~"
-def Erase(): return "<~"
-def Note():  return RegExMatch(r"[\w#]+")
-def generator(): return QStrMatch("<"), QStrMatch(">")  # TODO
-def atom():      return [group, tie, Cont, Rest, Erase, Note], ZeroOrMore(postfix)
+group .become(strlex("(") >> expression << strlex(")"))
+tie   .become(strlex("[") >> expression << strlex("]"))
 
-# Sequence construction
-def group(): return QStrMatch("("), expression, QStrMatch(")")
-def tie():   return QStrMatch("["), expression, QStrMatch("]")
+argless = lambda func: (lambda *_args: func())
 
-def Num():       return RegExMatch(r"\d+")
-def choice():    return QStrMatch("|"), OneOrMore(Num, sep=QStrMatch(",")), QStrMatch(":")
-def Modulator(): return RegExMatch(r"[\w#]+"), QStrMatch(";")
+Cont      = strlex("_").map(argless(st.Continuation))
+Rest      = strlex("~").map(argless(st.Rest))
+Erase     = strlex("<~").map(argless(st.Erase))
+Note      = lexeme(regex(r"[\w#]+")).map(st.Note)
+generator = ...
+atom      = seq(group | tie | Cont | Rest | Erase | Note, postfix.many()).combine(construct_atom)
 
-def cat(): return ZeroOrMore(atom)
-def par(): return OneOrMore(cat, sep=QStrMatch(","))
-def bra(): return OneOrMore(par, sep=choice)
-def mod(): return Optional(Modulator), bra
+# Structures
+selector_list = strlex("|") >> num.sep_by(strlex(",")).map(lambda ns: list(map(int, ns))) << strlex(":")
+modulator     = strlex("!") >> regex(r"[\w#]+") << strlex(":")
 
-expression = mod
+prune = lambda func: (lambda terms: terms[0] if len(terms) == 1 else func(terms))
 
-# Grammar root
-def fritter(): return expression, EOF
+concatenation = atom.at_least(1).map(prune(st.Concatenation))
+parallel      = concatenation.sep_by(strlex(",")).map(prune(st.Parallel))
+branches      = seq(parallel, seq(selector_list, parallel).many()).combine(construct_branches)
+modulations   = seq(
+    seq(modulator.optional(), branches).combine(construct_mod),
+    seq(modulator, branches).combine(construct_mod).many()
+).combine(lambda head, tail: [head] + tail).map(prune(st.Concatenation))
 
-
-class FritterVisitor(PTNodeVisitor):
-    # Operators
-
-    def visit_Octave(self, node, _children):
-        shift = node.value.count("+") - node.value.count("-")
-        return st.OctaveShift(None, shift)
-
-    def visit_Dynamics(self, node, _children):
-        return st.Dynamics(None, node.value)
-
-    def visit_Span(self, node, _children):
-        units = 0.0
-        for c in node.value:
-            # TODO error handling
-            units += SPAN_UNITS_MAP[c]
-        return st.Span(None, node.value)
-
-    def visit_Repeat(self, node, _children):
-        return st.Repeat(None, int(node.value))
-
-    # Atoms
-
-    def visit_Cont(self, _node, _children):
-        return st.Continuation()
-
-    def visit_Rest(self, _node, _children):
-        return st.Rest()
-
-    def visit_Erase(self, _node, _children):
-        return st.Erase()
-
-    def visit_Note(self, node, _children):
-        return st.Note(node.value)
-
-    def visit_atom(self, _node, children):
-        atom = children[0]
-        for operator in children.postfix:
-            operator.child = atom
-            atom = operator
-
-        return atom
-
-    # Sequence construction
-
-    def visit_group(self, _node, children):
-        return children
-
-    def visit_tie(self, _node, children):
-        return st.Tie(children[0])
-
-    def visit_choice(self, _node, children):
-        return list(map(int, children))
-
-    def visit_cat(self, _node, children):
-        if len(children) == 1: return children[0]
-
-        return st.Concatenation(children)
-
-    def visit_par(self, _node, children):
-        if len(children) == 1: return children[0]
-
-        return st.Parallel(children)
-
-    def visit_bra(self, _node, children):
-        if not children.choice: return children.par[0]
-
-        return st.Branch(
-            children.par,
-            {
-                num: index + 1
-                for index, nums in enumerate(children.choice)
-                for num in nums
-            }
-        )
-
-    def visit_mod(self, _node, children):
-        child = children.bra[0]
-        if not children.Modulator: return child
-
-        return st.Modulation(child, children.Modulator[0])
+expression.become(modulations)
 
 
-def parse_fritter(text: str) -> ...:
-    parser = ParserPython(fritter, memoization=True)
-    parse_tree = parser.parse(text)
-
-    visitor = FritterVisitor()
-    return visit_parse_tree(parse_tree, visitor)
+# print(mod_term.parse(""))
+print(expression.parse("!mod: a b, c d |3,4: e f, g h"))
+#print(expr.parse("1---+.abc/qhw"))

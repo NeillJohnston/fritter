@@ -8,18 +8,19 @@ class Node:
 
 
 @dataclass
-class Continuation(Node):
-    pass
+class Empty(Node): pass
 
 
 @dataclass
-class Rest(Node):
-    pass
+class Continuation(Node): pass
 
 
 @dataclass
-class Erase(Node):
-    pass
+class Rest(Node): pass
+
+
+@dataclass
+class Erase(Node): pass
 
 
 @dataclass
@@ -67,7 +68,7 @@ class Parallel(Node):
 
 
 @dataclass
-class Branch(Node):
+class Branches(Node):
     children: list[Node]
     selectors: dict[int, int]  # Map from repetition number to child index
 
