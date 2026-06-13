@@ -117,6 +117,5 @@ modulations   = seq(
 expression.become(modulations)
 
 
-# print(mod_term.parse(""))
-print(expression.parse("!mod: a b, c d |3,4: e f, g h"))
-#print(expr.parse("1---+.abc/qhw"))
+def parse(text: str) -> st.Node:
+    return expression.parse(text)

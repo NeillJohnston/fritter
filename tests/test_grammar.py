@@ -1,9 +1,9 @@
-from fritter.lang.grammar import expression
+from fritter.lang.grammar import parse
 from fritter.lang import st
 
 
 def test_operators():
-    tree = expression.parse("x ++ .abc /qe *4")
+    tree = parse("x ++ .abc /qe *4")
     assert tree == st.Repeat(
         st.Span(
             st.Dynamics(
@@ -20,7 +20,7 @@ def test_operators():
 
 
 def test_nesting_basic():
-    tree = expression.parse("a ((b c) (d e)) ([f g] [h i]) j")
+    tree = parse("a ((b c) (d e)) ([f g] [h i]) j")
     print(tree)
     assert tree == st.Concatenation([
         st.Note("a"),
@@ -53,7 +53,7 @@ def test_nesting_basic():
 
 
 def test_binop_precedence():
-    tree = expression.parse("a b !mod: c d, e f |1,2: g h, i j !mod2: k l")
+    tree = parse("a b !mod: c d, e f |1,2: g h, i j !mod2: k l")
     assert tree == st.Concatenation([
         st.Concatenation([
             st.Note("a"),

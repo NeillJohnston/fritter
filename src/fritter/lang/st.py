@@ -8,10 +8,6 @@ class Node:
 
 
 @dataclass
-class Empty(Node): pass
-
-
-@dataclass
 class Continuation(Node): pass
 
 
