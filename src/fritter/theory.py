@@ -28,8 +28,11 @@ class Note:
         alter_dir = "b" if self.alter < 0 else "#"
         return f"{self.letter}{alter_dir * abs(self.alter)}{self.octave}"
 
-    def shift(self, octaves: int) -> "Note":
+    def shifted(self, octaves: int) -> "Note":
         return Note(self.letter, self.alter, self.octave + octaves)
+
+    def altered(self, alter: int) -> "Note":
+        return Note(self.letter, self.alter + alter, self.octave)
 
     def abs_pitch(self) -> int:
         # Pitch centered on C0 = 0
@@ -40,7 +43,7 @@ class Note:
         return LETTER_PITCHES[self.letter] + self.alter + 12*(self.octave + 1)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Degree:
     steps: int
     alter: int
@@ -74,4 +77,4 @@ class Scale:
         index = (degree - 1) % len(self.degrees)
         octaves = (degree - 1) // len(self.degrees)
 
-        return self.degrees[index].of(self.root).shift(self.octave_span * octaves)
+        return self.degrees[index].of(self.root).shifted(self.octave_span * octaves)
