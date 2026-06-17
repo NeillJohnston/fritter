@@ -2,6 +2,7 @@ import re
 
 from parsy import seq, regex
 
+from fritter.lang.compiler import PitchProducer
 from fritter.theory import Degree, Note, Scale
 from fritter.std.scales import NAMED_SCALES
 
@@ -28,7 +29,7 @@ maj_note   = seq(alter, roman, rel_octave)
 scale_note = seq(alter, num, rel_octave)
 
 
-class ScalePitchProducer:
+class ScalePitchProducer(PitchProducer):
     scale: Scale
 
     def __init__(self, scale: Scale, bias: int = 12):
@@ -50,7 +51,7 @@ class ScalePitchProducer:
     def _scale_note(self, alter: int, degree: int, shift: int) -> Note:
         return self.scale.get(degree).altered(alter).shifted(shift)
 
-    def get_note(self, note: str) -> Note:
+    def _get_note(self, note: str) -> Note:
         return (
             abs_note
             | maj_note.combine(self._maj_note)
@@ -58,13 +59,26 @@ class ScalePitchProducer:
         ).parse(note)
 
     def get(self, note: str) -> int:
-        note = self.get_note(note)
+        note = self._get_note(note)
         return note.abs_pitch() + self.bias
 
     def modulated(self, modulator: str) -> "ScalePitchProducer":
         root, name = modulator.split()
 
-        root = self.get_note(root)
+        root = self._get_note(root)
         degrees = NAMED_SCALES[name]
         octave_span = 1 + degrees[-1].semitones() // 12
         return ScalePitchProducer(Scale(root, degrees, octave_span), self.bias)
+
+
+class MappingPitchProducer(PitchProducer):
+    mapping: dict[str, int]
+
+    def __init__(self, mapping: dict[str, int]):
+        self.mapping = mapping
+
+    def get(self, note: str) -> int:
+        return self.mapping[note]
+
+    def modulated(self, _modulator: str) -> "MappingPitchProducer":
+        assert False, "Not implemented"

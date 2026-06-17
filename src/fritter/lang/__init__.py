@@ -1,7 +1,7 @@
 import mido
 
 from fritter.lang.grammar import parse
-from fritter.lang.compiler import CompilerOptions, compile
+from fritter.lang.compiler import CompilerOptions, compile as _compile
 
 
 def compile(text: str, options: CompilerOptions) -> list[mido.Message]:
@@ -10,4 +10,4 @@ def compile(text: str, options: CompilerOptions) -> list[mido.Message]:
     Note that the MIDI channel needs to be set for each message after the fact.
     """
 
-    return compile(parse(text), options)
+    return _compile(parse(text), options)

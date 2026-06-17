@@ -33,9 +33,9 @@ class CompilerOptions:
     staccato_levels: list[float] = None
 
     def __post_init__(self):
-        gain_levels = self.gain_levels or [8, 16, 32]
-        swing_levels = self.swing_levels or [3/5, 2/3, 3/4]
-        staccato_levels = self.staccato_levels or [1/4, 1/8, 1/16]
+        self.gain_levels = self.gain_levels or [8, 16, 32]
+        self.swing_levels = self.swing_levels or [3/5, 2/3, 3/4]
+        self.staccato_levels = self.staccato_levels or [1/4, 1/8, 1/16]
 
 
 @dataclass
