@@ -97,12 +97,12 @@ Cont      = strlex("_").map(argless(st.Continuation))
 Rest      = strlex("~").map(argless(st.Rest))
 Erase     = strlex("<~").map(argless(st.Erase))
 Note      = lexeme(regex(r"[\w#]+")).map(st.Note)
-generator = ...
+generator = ...  # TODO
 atom      = seq(group | tie | Cont | Rest | Erase | Note, postfix.many()).combine(construct_atom)
 
 # Structures
 selector_list = strlex("|") >> num.sep_by(strlex(",")).map(lambda ns: list(map(int, ns))) << strlex(":")
-modulator     = strlex("!") >> regex(r"[\w#]+") << strlex(":")
+modulator     = strlex("!") >> regex(r"[^:]+") << strlex(":")
 
 prune = lambda func: (lambda terms: terms[0] if len(terms) == 1 else func(terms))
 

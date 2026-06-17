@@ -17,7 +17,7 @@ GLOBAL_BPM = 120
 
 def global_ppqn():
     # TODO this is definitely wrong
-    return (GLOBAL_BPM / 60) * GLOBAL_RES
+    return GLOBAL_RES / GLOBAL_BPM * 120
 
 
 @dataclass
@@ -71,7 +71,8 @@ class Player:
             message.channel = self.midi_channel
         GLOBAL_TRACKS[self.midi_channel] += messages
 
-    p = play
+    def __lshift__(self, text: str):
+        self.play(text)
 
 
 def set_bpm(bpm: int):

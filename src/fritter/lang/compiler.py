@@ -272,8 +272,8 @@ class MidiStage:
         end_ticks = self._ticks(time_curve(event.end_time() * stacatto_adj))
 
         return [
-            mido.Message(type="note_on", note=event.pitch, velocity=velocity, time=start_ticks),
-            mido.Message(type="note_off", note=event.pitch, time=end_ticks),
+            mido.Message(type="note_on", note=event.pitch + 12*event.octave_shift, velocity=velocity, time=start_ticks),
+            mido.Message(type="note_off", note=event.pitch + 12*event.octave_shift, time=end_ticks),
         ]
 
     def compile(self, events: list[Event]) -> list[mido.Message]:
