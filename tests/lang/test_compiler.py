@@ -1,27 +1,40 @@
 from fritter.lang.grammar import parse
-from fritter.lang.interpreter import Event, interpret
+from fritter.lang.compiler import CompilerOptions, Event, EventStage, PitchProducer
 
 
-def interpret_text(text: str):
-    return interpret(parse(text))
+# For testing, a pitch producer that produces notes multiplied by a number
+class TestPitchProducer(PitchProducer):
+    def __init__(self, k: int):
+        self.k = k
+
+    def get(self, note: str):
+        return self.k * int(note)
+
+    def modulated(self, modulator: str):
+        return TestPitchProducer(self.k * int(modulator))
+
+
+def events_compile(text: str):
+    producer = TestPitchProducer(1)
+    return EventStage(CompilerOptions(producer)).compile(parse(text))[:-1]  # Remove the EOF event
 
 
 def validate_sequences(text1: str, text2: str):
     # Validate that two sequences of text are interpreted to the same events
-    assert interpret_text(text1) == interpret_text(text2)
+    assert events_compile(text1) == events_compile(text2)
 
 
 def test_simple_sequence():
     # Check that events come out as expected for a mix of simple cases
-    events = interpret_text("!mod: 1+.a/h*2 _ ~ [2 3]")
+    events = events_compile("1+.a/h*2 _ ~ [2 3]")
     assert events == [
         # Ensure that modulation and simple operators applied
-        Event("1", 0.0, 2.0, ["mod"], 1, "a"),
+        Event(1, 0.0, 2.0, 1, "a"),
         # Ensure that the repetition + continuation on the last repetition applied
-        Event("1", 2.0, 3.0, ["mod"], 1, "a"),
+        Event(1, 2.0, 3.0, 1, "a"),
         # Ensure that the rest after the 1 and the tie on 2 and 3 applied
-        Event("2", 6.0, 0.5, ["mod"], 0, ""),
-        Event("3", 6.5, 0.5, ["mod"], 0, ""),
+        Event(2, 6.0, 0.5, 0, ""),
+        Event(3, 6.5, 0.5, 0, ""),
     ]
 
 
@@ -47,15 +60,15 @@ def test_nested_ties():
 
 def test_simple_parallel():
     # Check that simple parallelization works
-    events = interpret_text("(1, 2 3, 4) 5")
+    events = events_compile("(1, 2 3, 4) 5")
     assert events == [
-        Event("1", 0.0, 1.0, [], 0, ""),
-        Event("2", 0.0, 1.0, [], 0, ""),
+        Event(1, 0.0, 1.0, 0, ""),
+        Event(2, 0.0, 1.0, 0, ""),
         # Ensures that events are properly sorted by start time
-        Event("4", 0.0, 1.0, [], 0, ""),
-        Event("3", 1.0, 1.0, [], 0, ""),
+        Event(4, 0.0, 1.0, 0, ""),
+        Event(3, 1.0, 1.0, 0, ""),
         # Ensure that the length of the parallel sequence is equal to the length of its longest sequence
-        Event("5", 2.0, 1.0, [], 0, ""),
+        Event(5, 2.0, 1.0, 0, ""),
     ]
 
 
@@ -66,9 +79,9 @@ def test_nested_branches():
 
 def test_nested_modulation():
     # Check that modulation stacks properly
-    events = interpret_text("!modA: 1 (!modB: 2) !modC: 3")
+    events = events_compile("!2: 1 (!3: 1) !5: 1")
     assert events == [
-        Event("1", 0.0, 1.0, ["modA"],         0, ""),
-        Event("2", 1.0, 1.0, ["modA", "modB"], 0, ""),
-        Event("3", 2.0, 1.0, ["modC"]        , 0, ""),
+        Event(2, 0.0, 1.0, 0, ""),
+        Event(6, 1.0, 1.0, 0, ""),
+        Event(5, 2.0, 1.0, 0, ""),
     ]
