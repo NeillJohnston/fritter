@@ -114,7 +114,7 @@ modulations   = seq(
     seq(modulator, branches).combine(construct_mod).many()
 ).combine(lambda head, tail: [head] + tail).map(prune(st.Concatenation))
 
-expression.become(modulations)
+expression.become(space >> modulations)
 
 
 def parse(text: str) -> st.Node:
