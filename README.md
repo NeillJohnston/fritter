@@ -5,7 +5,6 @@ Fritter is a Python library for turning code into music (as MIDI files). It come
 ```py
 from fritter.std.session import *
 
-
 set_bpm(140)
 
 guitar = Player.gm("gm_electric_guitar_jazz", "C major")
@@ -15,7 +14,8 @@ guitar << "((1 2 b3 4)/e 2 [b7- 1] _/w).s"
 drums  << "(rc ~ ~ rc).sp/e*2"
 
 write_midi("out.mid")
-
+# If you have fluidsynth installed, you can also directly play like this:
+play_midi("path/to/soundfont.sf2")
 ```
 
 ## Fritter Notation Language
@@ -54,6 +54,16 @@ Two "special" notes are the **rest** and **continuation**. Rests simply don't pl
 ```
 
 These two sequences have the same length - the first sequence will play a 1, rest, then play a 2, and rest again. The second sequence will play a 1 followed by a 2, but both will last longer.
+
+Drums have an entirely different notation, you can refer to a drum by an abbreviated name:
+
+```
+HH BD SN
+```
+
+Hi-hat, bass drum, snare.
+
+TODO document drums better once PitchProducers are merged into the language
 
 **Octave shifting:** The octave a note is played in can also be adjusted with the `+` and `-` operators.
 
@@ -162,6 +172,14 @@ These will play the sequences `1 1 1 1` and `1 2 3 4 1 2 3 4`, respectively.
 ```
 
 This will play the sequence `1 2 1 3`. On the first and third repetitions, the default branch is played. However, the second and fourth repetitions are specified to play different branches.
+
+In a branch you can specify as many repetitions as you want:
+
+```
+(1 |4,7,8: 2)*8
+```
+
+This will play a 2 on the 4th, 7th, and 8th repetitions, and a 1 every other time.
 
 The repetition "index" is only taken from the _closest_ repetition operator. This allows you to stack repetitions more easily:
 
