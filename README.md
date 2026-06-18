@@ -1,6 +1,6 @@
 # Fritter
 
-Fritter is a Python library for turning code into music (as MIDI files). It comes with a music notation language that compiles to MIDI and a "standard library" that hosts some tools for composing and support for General MIDI.
+Fritter is a Python library for turning code into music (as MIDI files). It comes with a music expression notation language that compiles to MIDI and a "standard library" that hosts some tools for composing and support for General MIDI.
 
 ```py
 from fritter.std.session import *
@@ -16,6 +16,14 @@ drums  << "(rc ~ ~ rc).sp/e*2"
 write_midi("out.mid")
 # If you have fluidsynth installed, you can also directly play like this:
 play_midi("path/to/soundfont.sf2")
+```
+
+## Installation
+
+This is just a personal project, so it's not on pypi or anything. The repository is structured so you can easily install it locally, though. Clone the repository then:
+
+```sh
+pip install -e .
 ```
 
 ## Fritter Notation Language
