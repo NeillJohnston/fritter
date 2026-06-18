@@ -2,6 +2,8 @@
 
 Fritter is a Python library for turning code into music (as MIDI files). It comes with a music expression notation language that compiles to MIDI and a "standard library" that hosts some tools for composing and support for General MIDI.
 
+Fritter is heavily inspired by [Strudel](https://strudel.cc/). If you're looking for a more fully-fledged project to start creating music with code, you should really start there!
+
 ```py
 from fritter.std.session import *
 
