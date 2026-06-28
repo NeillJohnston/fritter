@@ -264,16 +264,20 @@ class MidiStage:
             + (((t % swing_width) / swing_width)**swing_p) * swing_width
         )
 
-        stacatto_adj = 1.0
+        span = event.span
         if stacatto_level > 0:
-            stacatto_adj = self.options.staccato_levels[stacatto_level - 1]
+            span *= self.options.staccato_levels[stacatto_level - 1]
 
         start_ticks = self._ticks(time_curve(event.time))
-        end_ticks = self._ticks(time_curve(event.end_time() * stacatto_adj))
+        note_end_ticks = self._ticks(time_curve(event.time + span))
+        event_end_ticks = self._ticks(time_curve(event.end_time()))
+
+        note = event.pitch + 12*event.octave_shift
 
         return [
-            mido.Message(type="note_on", note=event.pitch + 12*event.octave_shift, velocity=velocity, time=start_ticks),
-            mido.Message(type="note_off", note=event.pitch + 12*event.octave_shift, time=end_ticks),
+            mido.Message(type="note_on", note=note, velocity=velocity, time=start_ticks),
+            mido.Message(type="note_off", note=note, time=note_end_ticks),
+            mido.Message(type="note_off", note=0, time=event_end_ticks),
         ]
 
     def compile(self, events: list[Event]) -> list[mido.Message]:
