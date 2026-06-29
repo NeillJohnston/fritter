@@ -157,10 +157,11 @@ This uses a two and span operator to play a triplet over the span of a half-note
 - Velocity (`.p` for quieter, `.f` for louder)
 - Staccato (`.t`)
 - Swing (`.s` to adjust swing amount, `.w` to adjust swing width)
+- Strum (`.u` for an upstroke, `.d` for a downstroke)
 
 Dynamics stack, so `1.pp` will play a note very softly and `1.fff` will play the same note very, very loudly.
 
-TODO explain swing
+TODO explain swing, staccato, strumming
 
 **Repetition:** You can repeat a note or a sequence with the repeat operator `*`:
 

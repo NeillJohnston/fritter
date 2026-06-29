@@ -29,12 +29,12 @@ def test_simple_sequence():
     events = events_compile("1+.a/h*2 _ ~ [2 3]")
     assert events == [
         # Ensure that modulation and simple operators applied
-        Event(1, 0.0, 2.0, 1, "a"),
+        Event(1, 0.0, 2.0, 1, "a", 0, 1),
         # Ensure that the repetition + continuation on the last repetition applied
-        Event(1, 2.0, 3.0, 1, "a"),
+        Event(1, 2.0, 3.0, 1, "a", 0, 1),
         # Ensure that the rest after the 1 and the tie on 2 and 3 applied
-        Event(2, 6.0, 0.5, 0, ""),
-        Event(3, 6.5, 0.5, 0, ""),
+        Event(2, 6.0, 0.5, 0, "", 0, 1),
+        Event(3, 6.5, 0.5, 0, "", 0, 1),
     ]
 
 
@@ -62,13 +62,20 @@ def test_simple_parallel():
     # Check that simple parallelization works
     events = events_compile("(1, 2 3, 4) 5")
     assert events == [
-        Event(1, 0.0, 1.0, 0, ""),
-        Event(2, 0.0, 1.0, 0, ""),
+        Event(1, 0.0, 1.0, 0, "", 0, 3),
+        Event(2, 0.0, 1.0, 0, "", 1, 3),
         # Ensures that events are properly sorted by start time
-        Event(4, 0.0, 1.0, 0, ""),
-        Event(3, 1.0, 1.0, 0, ""),
+        Event(4, 0.0, 1.0, 0, "", 2, 3),
+        Event(3, 1.0, 1.0, 0, "", 0, 1),
         # Ensure that the length of the parallel sequence is equal to the length of its longest sequence
-        Event(5, 2.0, 1.0, 0, ""),
+        Event(5, 2.0, 1.0, 0, "", 0, 1),
+    ]
+
+    events = events_compile("1, 2")
+    assert events == [
+        # Ensure events at the end are properly assigned strums
+        Event(1, 0.0, 1.0, 0, "", 0, 2),
+        Event(2, 0.0, 1.0, 0, "", 1, 2),
     ]
 
 
@@ -81,7 +88,7 @@ def test_nested_modulation():
     # Check that modulation stacks properly
     events = events_compile("!2: 1 (!3: 1) !5: 1")
     assert events == [
-        Event(2, 0.0, 1.0, 0, ""),
-        Event(6, 1.0, 1.0, 0, ""),
-        Event(5, 2.0, 1.0, 0, ""),
+        Event(2, 0.0, 1.0, 0, "", 0, 1),
+        Event(6, 1.0, 1.0, 0, "", 0, 1),
+        Event(5, 2.0, 1.0, 0, "", 0, 1),
     ]

@@ -31,11 +31,13 @@ class CompilerOptions:
     gain_levels: list[int] = None
     swing_levels: list[float] = None
     staccato_levels: list[float] = None
+    strum_levels: list[float] = None
 
     def __post_init__(self):
         self.gain_levels = self.gain_levels or [8, 16, 32]
         self.swing_levels = self.swing_levels or [3/5, 2/3, 3/4]
         self.staccato_levels = self.staccato_levels or [1/4, 1/8, 1/16]
+        self.strum_levels = self.strum_levels or [1/32, 1/16, 1/8]
 
 
 @dataclass
@@ -46,14 +48,16 @@ class Event:
     span: float
     octave_shift: int
     dynamics: str
+    strum_index: int
+    strum_size: int
 
     @staticmethod
     def start_of_file() -> "Event":
-        return Event(_START_OF_FILE, 0.0, 0.0, None, None)
+        return Event(_START_OF_FILE, 0.0, 0.0, None, None, None, None)
 
     @staticmethod
     def end_of_file(time: float) -> "Event":
-        return Event(_END_OF_FILE, time, 0.0, None, None)
+        return Event(_END_OF_FILE, time, 0.0, None, None, None, None)
 
     @staticmethod
     def is_normal(event: "Event") -> bool:
@@ -84,11 +88,13 @@ class EventStage:
     def _emit(self, pitch: int):
         span = self.qnv_stack[-1]
 
-        event = Event(pitch, self.time, span, None, None)
+        event = Event(pitch, self.time, span, None, None, None, None)
         # Special events (continuations, rests, and erasures) don't need these
         if pitch not in [_CONTINUATION, _REST, _ERASE]:
             event.octave_shift = sum(self.oct_stack)
             event.dynamics = "".join(self.dyn_stack)
+            event.strum_index = 0
+            event.strum_size = 1
         if pitch == _ERASE:
             span *= -1
 
@@ -192,7 +198,7 @@ class EventStage:
         events = self.events
         # Dummy "start-of-file" event to make iteration easier
         events.append(Event.start_of_file())
-        events.sort(key=lambda event: event.time)
+        events.sort(key=lambda event: (event.time, event.pitch))
 
         # Need to modify list in-place, hence the old-school iteration
         index = 1
@@ -216,7 +222,18 @@ class EventStage:
             else:
                 index += 1
 
-        return list(filter(Event.is_normal, events)) + [Event.end_of_file(self.time)]
+        events = list(filter(Event.is_normal, events))
+        index = 0
+        while index < len(events):
+            strum_size = 1
+            while index + strum_size < len(events) and events[index].time == events[index + strum_size].time:
+                strum_size += 1
+            for strum_index in range(strum_size):
+                events[index + strum_index].strum_index = strum_index
+                events[index + strum_index].strum_size = strum_size
+            index += strum_size
+
+        return events + [Event.end_of_file(self.time)]
 
 
 class MidiStage:
@@ -233,6 +250,7 @@ class MidiStage:
         stacatto_level = 0
         swing_level = 0
         swing_width = 1.0
+        strum_level = 0
 
         for d in event.dynamics:
             match d:
@@ -241,6 +259,8 @@ class MidiStage:
                 case "t": stacatto_level += 1
                 case "s": swing_level += 1
                 case "w": swing_width += 1
+                case "u": strum_level += 1
+                case "d": strum_level -= 1
                 # Reset
                 case "0":
                     gain_level = 0
@@ -265,19 +285,29 @@ class MidiStage:
         )
 
         span = event.span
+
+        # TODO clean up, I wrote this when I had a migraine
+        offset = 0.0
+        if strum_level != 0 and event.strum_size > 1:
+            strum_power = self.options.strum_levels[abs(strum_level) - 1]
+            if strum_level > 0:
+                strum_offset = event.strum_index / (event.strum_size - 1)
+            else:
+                strum_offset = (event.strum_size - 1 - event.strum_index) / (event.strum_size - 1)
+            offset = span * strum_power * strum_offset
+            span -= offset
+
         if stacatto_level > 0:
             span *= self.options.staccato_levels[stacatto_level - 1]
 
-        start_ticks = self._ticks(time_curve(event.time))
-        note_end_ticks = self._ticks(time_curve(event.time + span))
-        event_end_ticks = self._ticks(time_curve(event.end_time()))
+        start_ticks = self._ticks(time_curve(event.time + offset))
+        end_ticks = self._ticks(time_curve(event.time + offset + span))
 
         note = event.pitch + 12*event.octave_shift
 
         return [
             mido.Message(type="note_on", note=note, velocity=velocity, time=start_ticks),
-            mido.Message(type="note_off", note=note, time=note_end_ticks),
-            mido.Message(type="note_off", note=0, time=event_end_ticks),
+            mido.Message(type="note_off", note=note, time=end_ticks),
         ]
 
     def compile(self, events: list[Event]) -> list[mido.Message]:
