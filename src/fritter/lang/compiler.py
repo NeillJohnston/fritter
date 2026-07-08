@@ -53,11 +53,11 @@ class Event:
 
     @staticmethod
     def start_of_file() -> "Event":
-        return Event(_START_OF_FILE, 0.0, 0.0, None, None, None, None)
+        return Event(_START_OF_FILE, 0.0, 0.0, 0, None, None, None)
 
     @staticmethod
     def end_of_file(time: float) -> "Event":
-        return Event(_END_OF_FILE, time, 0.0, None, None, None, None)
+        return Event(_END_OF_FILE, time, 0.0, 0, None, None, None)
 
     @staticmethod
     def is_normal(event: "Event") -> bool:
@@ -66,6 +66,9 @@ class Event:
 
     def end_time(self) -> float:
         return self.time + self.span
+
+    def abs_pitch(self) -> int:
+        return self.pitch + 12*(self.octave_shift or 0)
 
 
 class EventStage:
@@ -198,7 +201,7 @@ class EventStage:
         events = self.events
         # Dummy "start-of-file" event to make iteration easier
         events.append(Event.start_of_file())
-        events.sort(key=lambda event: (event.time, event.pitch))
+        events.sort(key=lambda event: (event.time, event.abs_pitch()))
 
         # Need to modify list in-place, hence the old-school iteration
         index = 1
@@ -303,7 +306,7 @@ class MidiStage:
         start_ticks = self._ticks(time_curve(event.time + offset))
         end_ticks = self._ticks(time_curve(event.time + offset + span))
 
-        note = event.pitch + 12*event.octave_shift
+        note = event.abs_pitch()
 
         return [
             mido.Message(type="note_on", note=note, velocity=velocity, time=start_ticks),
