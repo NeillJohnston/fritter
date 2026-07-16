@@ -70,8 +70,6 @@ strlex = lambda pattern: lexeme(string(pattern))
 num   = lexeme(regex(r"\d+"))
 
 expression  = forward_declaration()
-group = forward_declaration()
-tie   = forward_declaration()
 
 # Operators
 Octave   = lexeme(regex(r"[\-+]+").map(lambda s: s.count("+") - s.count("-")))
@@ -88,17 +86,18 @@ postfix    = (
 )
 
 # Atoms
-group .become(strlex("(") >> expression << strlex(")"))
-tie   .become(strlex("[") >> expression.map(st.Tie) << strlex("]"))
+group = strlex("(") >> expression << strlex(")")
+tie   = strlex("[") >> expression.map(st.Tie) << strlex("]")
 
 argless = lambda func: (lambda *_args: func())
 
 Cont      = strlex("_").map(argless(st.Continuation))
 Rest      = strlex("~").map(argless(st.Rest))
+Ditto     = strlex("@").map(argless(st.Ditto))
 Erase     = strlex("<~").map(argless(st.Erase))
 Note      = lexeme(regex(r"[\w#]+")).map(st.Note)
 generator = ...  # TODO
-atom      = seq(group | tie | Cont | Rest | Erase | Note, postfix.many()).combine(construct_atom)
+atom      = seq(group | tie | Cont | Rest | Ditto | Erase | Note, postfix.many()).combine(construct_atom)
 
 # Structures
 selector_list = strlex("|") >> num.sep_by(strlex(",")).map(lambda ns: list(map(int, ns))) << strlex(":")

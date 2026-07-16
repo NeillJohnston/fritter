@@ -56,14 +56,15 @@ One more way is by using roman numerals, which always refer to the root note's r
 i iii v
 ```
 
-Two "special" notes are the **rest** and **continuation**. Rests simply don't play anything, while continuations extend the last-played note(s):
+Three "special" notes are **rests**, **continuations**, and **dittos**. Rests simply don't play anything, continuations extend the last-played note(s), and dittos copy the pitch of the last-played note:
 
 ```
 1 ~ 2 ~
 1 _ 2 _
+1 @ 2 @
 ```
 
-These two sequences have the same length - the first sequence will play a 1, rest, then play a 2, and rest again. The second sequence will play a 1 followed by a 2, but both will last longer.
+These two sequences have the same length - the first sequence will play a 1, rest, then play a 2, and rest again. The second sequence will play a 1 followed by a 2, but both will last longer. The third sequence will play a 1 twice then a 2 twice.
 
 Drums have an entirely different notation, you can refer to a drum by an abbreviated name:
 

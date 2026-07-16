@@ -26,7 +26,7 @@ def validate_sequences(text1: str, text2: str):
 
 def test_simple_sequence():
     # Check that events come out as expected for a mix of simple cases
-    events = events_compile("1+.a/h*2 _ ~ [2 3]")
+    events = events_compile("1+.a/h*2 _ ~ [2 3] @")
     assert events == [
         # Ensure that modulation and simple operators applied
         Event(1, 0.0, 2.0, 1, "a", 0, 1),
@@ -35,6 +35,8 @@ def test_simple_sequence():
         # Ensure that the rest after the 1 and the tie on 2 and 3 applied
         Event(2, 6.0, 0.5, 0, "", 0, 1),
         Event(3, 6.5, 0.5, 0, "", 0, 1),
+        # Ensure that the ditto is parsed
+        Event(3, 7.0, 1.0, 0, "", 0, 1),
     ]
 
 
@@ -92,3 +94,14 @@ def test_nested_modulation():
         Event(6, 1.0, 1.0, 0, "", 0, 1),
         Event(5, 2.0, 1.0, 0, "", 0, 1),
     ]
+
+
+def test_repeated_continuations():
+    # Check that continuations stack properly
+    validate_sequences("1 _ _/h _/w", "1/ww")
+
+
+def test_repeated_dittos():
+    # Check that dittos stack properly
+    validate_sequences("1 @ @.a/h*2", "1 1 1.a/h*2")
+    validate_sequences("(1, 2, 3) @ @/h", "(1, 2, 3) (1, 2, 3) (1, 2, 3)/h")

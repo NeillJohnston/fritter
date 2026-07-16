@@ -10,8 +10,9 @@ from fritter.lang import st
 
 _START_OF_FILE = -1000
 _CONTINUATION  = -1001
-_REST          = -1002
-_ERASE         = -1003
+_DITTO         = -1002
+_REST          = -1003
+_ERASE         = -1004
 _END_OF_FILE   = -2000
 
 
@@ -34,9 +35,9 @@ class CompilerOptions:
     strum_levels: list[float] = None
 
     def __post_init__(self):
-        self.gain_levels = self.gain_levels or [8, 16, 32]
+        self.gain_levels = self.gain_levels or [4, 16, 32]
         self.swing_levels = self.swing_levels or [3/5, 2/3, 3/4]
-        self.staccato_levels = self.staccato_levels or [1/4, 1/8, 1/16]
+        self.staccato_levels = self.staccato_levels or [1/2, 1/4, 1/8]
         self.strum_levels = self.strum_levels or [1/32, 1/16, 1/8]
 
 
@@ -70,6 +71,17 @@ class Event:
     def abs_pitch(self) -> int:
         return self.pitch + 12*(self.octave_shift or 0)
 
+    def copy(self) -> "Event":
+        return Event(
+            self.pitch,
+            self.time,
+            self.span,
+            self.octave_shift,
+            self.dynamics,
+            self.strum_index,
+            self.strum_size,
+        )
+
 
 class EventStage:
     """Compilation stage that turns a syntax tree into a flat list of "events", somewhat-abstract
@@ -92,7 +104,7 @@ class EventStage:
         span = self.qnv_stack[-1]
 
         event = Event(pitch, self.time, span, None, None, None, None)
-        # Special events (continuations, rests, and erasures) don't need these
+        # Some special events (continuations, rests, and erasures) don't need these
         if pitch not in [_CONTINUATION, _REST, _ERASE]:
             event.octave_shift = sum(self.oct_stack)
             event.dynamics = "".join(self.dyn_stack)
@@ -111,6 +123,9 @@ class EventStage:
 
     def _walk_continuation(self, _node: st.Continuation):
         self._emit(_CONTINUATION)
+
+    def _walk_ditto(self, _node: st.Ditto):
+        self._emit(_DITTO)
 
     def _walk_rest(self, _node: st.Rest):
         self._emit(_REST)
@@ -179,6 +194,7 @@ class EventStage:
     def walk(self, node: st.Node):
         walk_func = {
             st.Continuation: self._walk_continuation,
+            st.Ditto: self._walk_ditto,
             st.Rest: self._walk_rest,
             st.Erase: self._walk_erase,
             st.Note: self._walk_note,
@@ -208,13 +224,25 @@ class EventStage:
         while index < len(events):
             event = events[index]
             if event.pitch == _CONTINUATION:
-                cont_index = index-1
-                cont_time = events[cont_index].time
-                while events[cont_index].time == cont_time:
-                    events[cont_index].span += event.span
-                    cont_index -= 1
+                ditto_index = index-1
+                cont_time = events[ditto_index].time
+                while events[ditto_index].time == cont_time:
+                    events[ditto_index].span += event.span
+                    ditto_index -= 1
 
                 events.pop(index)
+
+            elif event.pitch == _DITTO:
+                ditto_size = 1
+                ditto_time = events[index - ditto_size].time
+                while events[index - ditto_size].time == ditto_time:
+                    ditto = events[index].copy()
+                    ditto.pitch = events[index - ditto_size].pitch
+                    events.insert(index+1, ditto)
+                    ditto_size += 1
+
+                events.pop(index)
+                index += ditto_size - 1
 
             elif event.pitch == _REST:
                 events.pop(index)
