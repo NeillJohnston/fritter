@@ -12,12 +12,12 @@ branches      ::= parallel (branch_selectors parallel)*
 parallel      ::= concatenation ("," concatenation)*
 concatenation ::= atom+
 
-atom  ::= (group | tie | Cont | Rest | Erase | Note) operator*
+atom  ::= (group | tie | Cont | Rest | Ditto | Note) operator*
 group ::= "(" expression ")"
 tie   ::= "[" expression "]"
 Cont  ::= "_"
 Rest  ::= "~"
-Erase ::= "<~"
+Ditto ::= "@"
 Note  ::= /[\w#]+/
 
 operator ::= Octave | Dynamics | Span | Repeat
@@ -94,10 +94,9 @@ argless = lambda func: (lambda *_args: func())
 Cont      = strlex("_").map(argless(st.Continuation))
 Rest      = strlex("~").map(argless(st.Rest))
 Ditto     = strlex("@").map(argless(st.Ditto))
-Erase     = strlex("<~").map(argless(st.Erase))
 Note      = lexeme(regex(r"[\w#]+")).map(st.Note)
 generator = ...  # TODO
-atom      = seq(group | tie | Cont | Rest | Ditto | Erase | Note, postfix.many()).combine(construct_atom)
+atom      = seq(group | tie | Cont | Rest | Ditto | Note, postfix.many()).combine(construct_atom)
 
 # Structures
 selector_list = strlex("|") >> num.sep_by(strlex(",")).map(lambda ns: list(map(int, ns))) << strlex(":")

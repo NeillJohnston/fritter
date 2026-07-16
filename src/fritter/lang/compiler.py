@@ -12,7 +12,6 @@ _START_OF_FILE = -1000
 _CONTINUATION  = -1001
 _DITTO         = -1002
 _REST          = -1003
-_ERASE         = -1004
 _END_OF_FILE   = -2000
 
 
@@ -105,13 +104,11 @@ class EventStage:
 
         event = Event(pitch, self.time, span, None, None, None, None)
         # Some special events (continuations, rests, and erasures) don't need these
-        if pitch not in [_CONTINUATION, _REST, _ERASE]:
+        if pitch not in [_CONTINUATION, _REST]:
             event.octave_shift = sum(self.oct_stack)
             event.dynamics = "".join(self.dyn_stack)
             event.strum_index = 0
             event.strum_size = 1
-        if pitch == _ERASE:
-            span *= -1
 
         self.events.append(event)
         self.time += span
@@ -129,9 +126,6 @@ class EventStage:
 
     def _walk_rest(self, _node: st.Rest):
         self._emit(_REST)
-
-    def _walk_erase(self, _node: st.Erase):
-        self._emit(_ERASE)
 
     def _walk_note(self, node: st.Note):
         producer = self.mod_stack[-1]
@@ -196,7 +190,6 @@ class EventStage:
             st.Continuation: self._walk_continuation,
             st.Ditto: self._walk_ditto,
             st.Rest: self._walk_rest,
-            st.Erase: self._walk_erase,
             st.Note: self._walk_note,
             st.OctaveShift: self._walk_octave_shift,
             st.Dynamics: self._walk_dynamics,
@@ -246,9 +239,6 @@ class EventStage:
 
             elif event.pitch == _REST:
                 events.pop(index)
-
-            elif event.pitch == _ERASE:
-                assert False, "TODO"
 
             else:
                 index += 1

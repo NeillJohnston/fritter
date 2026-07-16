@@ -20,10 +20,6 @@ class Ditto(Node): pass
 
 
 @dataclass
-class Erase(Node): pass
-
-
-@dataclass
 class Note(Node):
     value: str
 
