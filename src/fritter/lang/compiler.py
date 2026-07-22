@@ -34,7 +34,7 @@ class CompilerOptions:
     strum_levels: list[float] = None
 
     def __post_init__(self):
-        self.gain_levels = self.gain_levels or [4, 16, 32]
+        self.gain_levels = self.gain_levels or [8, 16, 24, 32, 40]
         self.swing_levels = self.swing_levels or [3/5, 2/3, 3/4]
         self.staccato_levels = self.staccato_levels or [1/2, 1/4, 1/8]
         self.strum_levels = self.strum_levels or [1/32, 1/16, 1/8]
