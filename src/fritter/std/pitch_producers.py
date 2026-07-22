@@ -63,7 +63,15 @@ class ScalePitchProducer(PitchProducer):
         return note.abs_pitch() + self.bias
 
     def modulated(self, modulator: str) -> "ScalePitchProducer":
-        root, name = modulator.split()
+        modulator = modulator.split()
+
+        if len(modulator) == 1:
+            root = modulator[0]
+            name = "major"
+        elif len(modulator) == 2:
+            root, name = modulator
+        else:
+            assert False, "Not implemented"
 
         root = self._get_note(root)
         degrees = NAMED_SCALES[name]

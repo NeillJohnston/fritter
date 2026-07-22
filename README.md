@@ -108,10 +108,17 @@ These play different arpeggios of chords by modulating then using the same `1 3 
 
 Modulating from C, these are Dm7 and G7 respectively.
 
+For convenience, the default scale to modulate to (if none is provided) is the major scale. These modulations do the same thing:
+
+```
+!IV major: ...
+!IV: ...
+```
+
 You can nest modulations, here's a weird way of playing a 2-5-1:
 
 ```
-(!V major: (!V minor: ...) ...) ...
+(!V major: (!v minor: ...) ...) ...
 ```
 
 You can also use an octave shift in the root note of a modulation:

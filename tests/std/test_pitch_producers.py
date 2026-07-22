@@ -34,3 +34,9 @@ def test_scale_producer_modulate():
     assert e1_major.get("1") == 16
     assert e1_major.get("3") == 20
     assert e1_major.get("5") == 23
+
+    e1_major = c0_minor.modulated("E1")
+    assert e1_major.get("1") == 16
+    assert e1_major.get("3") == 20
+    assert e1_major.get("5") == 23
+
