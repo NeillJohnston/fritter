@@ -206,8 +206,13 @@ SCALE_DATA = {
 
 
 SCALE_NICKNAMES = {
-    "ionian": ["major"],
-    "aeolian": ["minor"],
+    "lydian": ["lyd"],
+    "ionian": ["major", "ion"],
+    "mixolydian": ["mixo"],
+    "dorian": ["dor"],
+    "aeolian": ["minor", "aeol"],
+    "phrygian": ["phry"],
+    "locrian": ["loc"],
 }
 
 

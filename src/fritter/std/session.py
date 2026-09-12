@@ -10,6 +10,7 @@ from fritter.std.pitch_producers import ScalePitchProducer, MappingPitchProducer
 from fritter.std import gm
 
 
+GLOBAL_PLAYERS = []
 GLOBAL_TRACKS = {}
 GLOBAL_RES = 480
 GLOBAL_BPM = 120
@@ -56,7 +57,7 @@ class Player:
             {},
         )
 
-    def __post_init__(self):
+    def init_global_track(self):
         global GLOBAL_TRACKS
 
         track = mido.MidiTrack()
@@ -64,6 +65,12 @@ class Player:
             mido.Message("program_change", channel=self.midi_channel, program=self.midi_patch, time=0)
         )
         GLOBAL_TRACKS[self.midi_channel] = track
+
+    def __post_init__(self):
+        global GLOBAL_PLAYERS
+        GLOBAL_PLAYERS.append(self)
+
+        self.init_global_track()
 
     def play(self, text: str) -> "Player":
         global GLOBAL_TRACKS
@@ -107,6 +114,8 @@ def set_bpm(bpm: int):
 
 
 def write_midi(filename: str = None, file = None):
+    """Write the current MIDI to a file. You can give this function either a filename or a file
+    object to write to."""
     midi = mido.MidiFile(
         ticks_per_beat=GLOBAL_RES,
         tracks=list(GLOBAL_TRACKS.values())
@@ -115,6 +124,10 @@ def write_midi(filename: str = None, file = None):
 
 
 def play_midi(sf2: str):
+    """Play the current MIDI.
+
+    Depends on fluidsynth.
+    """
     with NamedTemporaryFile() as tmp:
         write_midi(tmp.name)
         tmp.seek(0)
@@ -122,7 +135,17 @@ def play_midi(sf2: str):
 
 
 def render_midi(sf2: str, filename: str):
+    """Render the current MIDI to a file.
+
+    Depends on fluidsynth.
+    """
     with NamedTemporaryFile() as tmp:
         write_midi(tmp.name)
         tmp.seek(0)
         subprocess.run(["fluidsynth", "-iq", sf2, tmp.name, "-g", "1", "-F", filename])
+
+
+def ff():
+    """Fast-forward to the current location (more accurately deletes all current notes)."""
+    for player in GLOBAL_PLAYERS:
+        player.init_global_track()
