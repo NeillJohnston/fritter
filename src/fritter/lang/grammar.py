@@ -23,7 +23,7 @@ Note  ::= /[\w#]+/
 operator ::= Octave | Dynamics | Span | Repeat
 Octave   ::= ("-" | "+")+
 Dynamics ::= "." /\w+/
-Span     ::= "/" /[tseqhw]+/
+Span     ::= "/" /\d+/? /[tseqhw]+/
 Repeat   ::= "*" /\d+/
 """
 
@@ -43,6 +43,13 @@ def construct_atom(atom: st.Node, operators: list[st.Node]):
         partial.child = atom
         atom = partial
     return atom
+
+
+def construct_span(parts: tuple[str | None, str]) -> int:
+    mul, span = parts
+    mul = int(mul) if mul is not None else 1
+    span = sum(SPAN_UNITS_MAP[c] for c in span)
+    return mul * span
 
 
 def construct_branches(head: st.Node, tail: list[tuple[list[int], st.Node]]) -> st.Node:
@@ -74,7 +81,7 @@ expression  = forward_declaration()
 # Operators
 Octave   = lexeme(regex(r"[\-+]+").map(lambda s: s.count("+") - s.count("-")))
 Dynamics = lexeme(regex(r"\.(\w+)", group=1))
-Span     = lexeme(regex(r"/([tseqhw]+)", group=1).map(lambda s: sum(SPAN_UNITS_MAP[c] for c in s)))
+Span     = lexeme(regex(r"/(\d+)?([tseqhw]+)", group=(1, 2)).map(construct_span))
 Repeat   = lexeme(regex(r"\*(\d+)", group=1).map(int))
 # Parsers for operators will partially construct their nodes, for easy construction later
 partial_op = lambda func: (lambda operand: func(None, operand))

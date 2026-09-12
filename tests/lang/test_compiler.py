@@ -40,6 +40,13 @@ def test_simple_sequence():
     ]
 
 
+def test_span_math():
+    # Check that span multipliers apply correctly
+    validate_sequences("1/qe", "1/3e")
+    validate_sequences("1/wwww", "1/16q")
+    validate_sequences("1/q", "1/8t")
+
+
 def test_nested_dynamics():
     # Check that dynamics stack properly and apply outside-in
     validate_sequences("(1.a (2.b (3.c 4.d).e).f).g", "1.ga 2.gfb 3.gfec 4.gfed")

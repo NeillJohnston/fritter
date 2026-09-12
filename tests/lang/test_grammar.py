@@ -19,6 +19,14 @@ def test_operators():
     )
 
 
+def test_span_multiplier():
+    tree = parse("x/5h")
+    assert tree == st.Span(
+        st.Note("x"),
+        10
+    )
+
+
 def test_nesting_basic():
     tree = parse("a ((b c) (d e)) ([f g] [h i]) j")
     print(tree)
